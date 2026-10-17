@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>تحدي السرعة والإتقان في الحساب</title>
+<style>
+:root{--bg:#fff7ef;--card:#fff;--tx:#3b2f4a;--pr:#7c5cd6;--pr2:#ede7ff;--ok:#2e9e6a;--okb:#e0f6ea;--no:#d9485f;--nob:#fde6ea;--mu:#8a7f99;--bd:#eadff5;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d1828;--card:#2a2338;--tx:#f1eaff;--pr:#a68cff;--pr2:#3a3156;--ok:#58d19a;--okb:#1f3a2f;--no:#ff7a90;--nob:#41222b;--mu:#a99dbd;--bd:#3d3452}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:"Segoe UI",Tahoma,"Noto Naskh Arabic",Arial,sans-serif;font-size:18px}
+#app{max-width:760px;margin:auto;padding:14px}
+h1{font-size:1.5rem;text-align:center;margin:8px 0}h2{font-size:1.3rem;margin:10px 0}
+.card{background:var(--card);border:2px solid var(--bd);border-radius:20px;padding:16px;margin:10px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sk{cursor:pointer;text-align:center;font-size:1.1rem;font-weight:700;border:3px solid var(--bd);transition:.15s}
+.sk:hover{border-color:var(--pr);transform:translateY(-2px)}.sk .ic{font-size:2.2rem;display:block}
+.sk small{display:block;color:var(--mu);font-weight:400;font-size:.8rem;margin-top:4px}
+button{font:inherit;font-weight:700;border:0;border-radius:14px;padding:12px 18px;background:var(--pr);color:#fff;cursor:pointer;margin:4px}
+button.sec{background:var(--pr2);color:var(--pr)}button.sel{outline:3px solid var(--ok)}
+button.big{font-size:1.3rem;padding:16px 28px}
+input{font:inherit}
+.in{width:100%;font-size:2.4rem;text-align:center;padding:12px;border:3px solid var(--pr);border-radius:16px;background:var(--card);color:var(--tx);direction:ltr}
+.top{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:1.2rem;gap:8px;flex-wrap:wrap}
+.timer{font-size:1.8rem;color:var(--pr)}.timer.low{color:var(--no)}
+.q{font-size:4.2rem;text-align:center;font-weight:800;margin:26px 0;direction:rtl}
+.fb{text-align:center;font-size:1.3rem;font-weight:700;min-height:2em;border-radius:14px;padding:8px}
+.fb.ok{background:var(--okb);color:var(--ok)}.fb.no{background:var(--nob);color:var(--no)}
+.nav{display:flex;flex-wrap:wrap;justify-content:center;gap:4px}
+table{width:100%;border-collapse:collapse;font-size:.95rem}th,td{padding:8px;border-bottom:1px solid var(--bd);text-align:right}
+.wrap{overflow-x:auto}.bad{color:var(--no);font-weight:700}.mu{color:var(--mu)}
+.stat{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--bd)}
+.bar{height:12px;background:var(--pr2);border-radius:8px;overflow:hidden}.bar i{display:block;height:100%;background:var(--ok)}
+.corr{background:var(--nob);border-radius:16px;padding:14px;margin:10px 0;line-height:2;text-align:center}
+label{display:block;margin:8px 0}
+.pop{animation:pop .4s}@keyframes pop{50%{transform:scale(1.08)}}
+@media(max-width:480px){.q{font-size:3.2rem}#app{padding:10px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const AR='٠١٢٣٤٥٦٧٨٩';
+const ar=n=>String(n).replace(/\d/g,d=>AR[d]).replace('.','٫');
+const norm=s=>s.replace(/[٠-٩]/g,d=>AR.indexOf(d)).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).trim();
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const SK={add:{n:'الجمع ضمن منزلة',i:'➕',d:'٣ + ٥ = ؟'},sub:{n:'الطرح ضمن منزلة',i:'➖',d:'٩ − ٤ = ؟'},mul:{n:'حقائق الضرب الأساسية',i:'✖️',d:'٧ × ٨ = ؟'},div:{n:'حقائق القسمة الأساسية',i:'➗',d:'٧٢ ÷ ٨ = ؟'}};
+const SN={add:'الجمع',sub:'الطرح',mul:'الضرب',div:'القسمة'};
+const LV=['🌱 البداية','⭐ في طريق الإتقان','⭐⭐ متقنة','⭐⭐⭐ متقنة جدًا','🏆 طلاقة حسابية'];
+const KEY='mathFluencyV1';
+let db={students:{},cur:'',set:{t:[80,90,95],tg:{add:2,sub:2,mul:3,div:3},m:[2,1.5,1.2]}};
+try{const s=localStorage.getItem(KEY);if(s)db=Object.assign(db,JSON.parse(s))}catch(e){}
+db.set.m=db.set.m||[2,1.5,1.2];db.set.tg=Object.assign({add:2,sub:2,mul:3,div:3},db.set.tg);
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){}};
+const stu=()=>db.students[db.cur]||(db.students[db.cur]={});
+const sk=(k,st=stu())=>st[k]||(st[k]={facts:{},sess:[],lvl:0,bestAcc:0,bestTime:null});
+const app=document.getElementById('app');
+let DB=null,UID=null,CANW=false,CANR=false,remote={};
+(async()=>{try{if(!window.claude)return;const u=await claude.use('user');DB=await claude.use('db');if(!DB||!u)return;UID=await u.id();CANW=!!UID&&u.can('data.write')!==false;CANR=!!(u.canEdit()||u.isOwner());
+ try{const c=await DB.doc('settings/config').get();if(c.exists){const v=c.data();if(v&&v.t){db.set=v;db.set.m=db.set.m||[2,1.5,1.2];save()}}}catch(e){}
+ if(CANW)syncUp()}catch(e){}})();
+function syncUp(){if(!DB||!CANW||!db.cur||!db.students[db.cur])return;DB.doc('students/'+UID).set({name:db.cur,data:db.students[db.cur],t:Date.now()}).catch(()=>{})}
+function sub(){if(!DB||!CANR||sub.on)return;sub.on=1;DB.collection('students').onSnapshot(q=>{remote={};q.docs.forEach(d=>{const x=d.data();if(x&&x.name)remote[d.id]=x});const e=document.getElementById('tbl');if(e)e.innerHTML=tblHtml()},()=>{})}
+let ses=null,tm=null,teacherSkill='mul';
+
+function facts(k){const L=[];
+ if(k=='add')for(let a=0;a<10;a++)for(let b=0;b<10;b++)L.push({key:a+'+'+b,q:`${ar(a)} + ${ar(b)}`,a:a+b,x:[a,b]});
+ if(k=='sub')for(let a=0;a<10;a++)for(let b=0;b<=a;b++)L.push({key:a+'-'+b,q:`${ar(a)} − ${ar(b)}`,a:a-b,x:[a,b]});
+ if(k=='mul')for(let a=0;a<=9;a++)for(let b=0;b<=9;b++)L.push({key:a+'x'+b,q:`${ar(a)} × ${ar(b)}`,a:a*b,x:[a,b]});
+ if(k=='div')for(let a=1;a<=9;a++)for(let b=0;b<=9;b++)L.push({key:a*b+'/'+a,q:`${ar(a*b)} ÷ ${ar(a)}`,a:b,x:[a*b,a]});
+ return L}
+function weak(k){const f=sk(k).facts;return facts(k).filter(x=>{const r=f[x.key];return r&&r.w>0&&r.r<3*r.w})}
+function pick(){const f=sk(ses.k).facts;
+ if(!ses.deck||!ses.deck.length){const d=[];ses.pool.forEach(x=>{const r=f[x.key]||{r:0,w:0};const c=r.w>0&&r.r<3*r.w?(r.w>=3?3:2):1;for(let i=0;i<c;i++)d.push(x)});
+  for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]]}ses.deck=d}
+ let i=ses.deck.findIndex(x=>x.key!=ses.last&&(!k_isMul()||x.x[0]!=ses.lastA0));if(i<0)i=ses.deck.findIndex(x=>x.key!=ses.last);if(i<0)i=0;
+ const q=ses.deck.splice(i,1)[0];if(ses.mode!='weak'){sk(ses.k).deck=ses.deck.map(x=>x.key)}return q}
+const k_isMul=()=>ses.k=='mul'||ses.k=='div';
+
+function lvlOf(acc,avg,k){const t=db.set.t,tg=db.set.tg[k],m=db.set.m;if(avg==null)return 0;
+ if(acc>=t[2]&&avg<=tg)return 4;if(acc>=t[2]&&avg<=tg*m[2])return 3;if(acc>=t[1]&&avg<=tg*m[1])return 2;if(acc>=t[0]&&avg<=tg*m[0])return 1;return 0}
+function goal(k){const s=sk(k),L=Math.min(4,s.lvl+1),t=db.set.t,tg=db.set.tg[k],m=db.set.m;return{L,acc:[t[0],t[1],t[2],t[2]][L-1],time:[tg*m[0],tg*m[1],tg*m[2],tg][L-1],done:s.lvl>=4}}
+function goalHtml(k){const g=goal(k);return g.done?'🏆 أنتِ في مستوى الطلاقة، حافظي عليه':`🎯 هدف ${LV[g.L]}: دقة ${ar(g.acc)}٪ فأكثر <b>و</b> متوسط زمن ${ar(+g.time.toFixed(1))} ثانية أو أقل`}
+const mmss=s=>{s=Math.max(0,Math.ceil(s));return ar(String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'))};
+const avgT=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+
+function nav(){return `<div class="nav"><button class="sec" onclick="home()">🏠 الرئيسية</button><button class="sec" onclick="progress()">📈 تقدمي</button><button class="sec" onclick="teacher()">👩‍🏫 المعلمة</button></div>`}
+
+function home(){clearInterval(tm);ses=null;
+ if(!db.cur){app.innerHTML=`<h1>🌟 تحدي السرعة والإتقان في الحساب 🌟</h1><div class="card"><h2>🌸 ما اسمكِ؟</h2><input id="nm" class="in" style="direction:rtl;font-size:1.6rem" placeholder="اكتبي اسمك"><div style="text-align:center;margin-top:10px"><button class="big" onclick="setName()">هيا نبدأ</button></div></div>`;return}
+ const names=Object.keys(db.students);
+ app.innerHTML=`<h1>🌟 تحدي السرعة والإتقان في الحساب 🌟</h1>
+ <p style="text-align:center" class="mu">🎯 أتقني أولًا ← ⚡ أسرعي تدريجيًا ← 🏆 طلاقة حسابية</p>
+ <div class="card top"><span>👧 ${esc(db.cur)}</span><span>${names.length>1?`<select onchange="db.cur=this.value;save();home()" style="font:inherit;padding:6px;border-radius:10px">${names.map(n=>`<option ${n==db.cur?'selected':''}>${esc(n)}</option>`).join('')}</select>`:''}<button class="sec" onclick="db.cur='';home()">طالبة جديدة</button></span></div>
+ <h2>🌸 اختاري مهارة التدريب</h2>
+ <div class="grid">${Object.keys(SK).map((k,i)=>`<div class="card sk" onclick="skill('${k}')"><span class="ic">${SK[k].i}</span>${i+1}️⃣ ${SK[k].n}<small>${SK[k].d}</small><small>${LV[sk(k).lvl]}</small></div>`).join('')}</div>
+ <div class="card"><h2>🔥 تحدي اليوم</h2><div class="nav">${Object.keys(SK).map(k=>`<button onclick="start('${k}',60,'daily')">${SK[k].i} ${SN[k]}</button>`).join('')}</div></div>${nav()}`}
+function setName(){const n=document.getElementById('nm').value.trim();if(!n)return;db.cur=n;stu();save();syncUp();home()}
+
+let dur=60;
+function skill(k){const s=sk(k),w=weak(k),ph=s.lvl;
+ const phases=['🎯 المرحلة ١: أتقني الحقائق (بلا ضغط وقت)','🎯⚡ المرحلة ٢: الدقة مع السرعة','⚡⚡ المرحلة ٣: تحدي السرعة','🏆 المرحلة ٤: الطلاقة الحسابية'];
+ app.innerHTML=`<h1>🎯 تدريب ${SK[k].n}</h1>
+ <div class="card"><div class="stat"><span>مستواكِ</span><b>${LV[s.lvl]}</b></div><div class="stat"><span>المرحلة</span><b>${phases[Math.min(ph,3)]}</b></div></div>
+ <div class="card" style="text-align:center">${goalHtml(k)}</div>
+ ${ph==0?`<div class="card" style="text-align:center">١٠ أسئلة بلا مؤقت. ركزي على الصح أولًا.</div>`:`<div class="card"><h2>⏱️ مدة التدريب</h2><div class="nav" id="durs">${[[30,'٣٠ ثانية'],[60,'٦٠ ثانية'],[90,'٩٠ ثانية'],[120,'دقيقتان']].map(([d,t])=>`<button class="sec ${d==dur?'sel':''}" onclick="dur=${d};skill('${k}')">⏱️ ${t}</button>`).join('')}</div></div>`}
+ <div style="text-align:center"><button class="big" onclick="start('${k}',dur)">🚀 ابدئي التحدي</button>
+ <button class="sec" onclick="weakPage('${k}')">📚 حقائقي التي أحتاج إلى تدريب (${ar(w.length)})</button></div>${nav()}`}
+
+function start(k,d,mode,pool){
+ const s=sk(k);const untimed=!mode&&s.lvl==0;
+ ses={k,dur:mode=='daily'?60:d,left:mode=='daily'?60:d,untimed,max:untimed?10:(mode=='daily'?20:999),mode,right:0,wrong:0,times:[],pool:pool||facts(k),last:null,paused:false,lastT:Date.now(),prev:s.sess.length?s.sess[s.sess.length-1].acc:null};
+ if(mode!='weak'&&s.deck&&s.deck.length){const m={};ses.pool.forEach(x=>m[x.key]=x);ses.deck=s.deck.map(q=>m[q]).filter(Boolean)}
+ next();clearInterval(tm);tm=setInterval(tick,200)}
+function tick(){if(!ses)return;const n=Date.now();if(!ses.paused&&!ses.untimed)ses.left-=(n-ses.lastT)/1000;ses.lastT=n;
+ const t=document.getElementById('tm');if(t){t.textContent=mmss(ses.left);t.classList.toggle('low',ses.left<=10)}
+ if(!ses.untimed&&ses.left<=0)finish()}
+function next(){ses.cur=pick();ses.last=ses.cur.key;ses.lastA0=ses.cur.x[0];ses.qs=Date.now();ses.paused=false;ses.lastT=Date.now();
+ const done=ses.right+ses.wrong;
+ app.innerHTML=`<div class="top"><span>${ses.untimed?`السؤال ${ar(done+1)} من ${ar(10)}`:`⏱️ الوقت المتبقي: <span class="timer" id="tm">${mmss(ses.left)}</span>`}</span><span id="sc">✅ ${ar(ses.right)} صحيحة | ❌ ${ar(ses.wrong)} خطأ</span></div>
+ <div class="q" id="q">${ses.cur.q} = ؟</div>
+ <input id="ans" class="in" inputmode="numeric" autocomplete="off" autofocus>
+ <div id="fb" class="fb"></div>
+ <div style="text-align:center" id="act"></div>
+ <div style="text-align:center"><button class="sec" onclick="finish()" style="font-size:.8rem">إنهاء التدريب</button></div>`;
+ const i=document.getElementById('ans');i.focus();i.onkeydown=e=>{if(e.key=='Enter')check()};i.oninput=autoCheck}
+function autoCheck(){if(!ses||ses.paused)return;const v=norm(document.getElementById('ans').value);if(v!==''&&v.length>=String(ses.cur.a).length)check()}
+function check(){if(!ses||ses.paused)return;const i=document.getElementById('ans');const v=norm(i.value);if(v==='')return;
+ const c=ses.cur,t=(Date.now()-ses.qs)/1000,f=sk(ses.k).facts,r=f[c.key]||(f[c.key]={r:0,w:0,tt:0,n:0});
+ const fb=document.getElementById('fb');
+ if(+v===c.a){ses.right++;r.r++;r.tt+=t;r.n++;ses.times.push(t);save();
+  fb.className='fb ok pop';fb.textContent='✅ إجابة صحيحة';i.disabled=true;ses.paused=true;
+  document.getElementById('sc').textContent=`✅ ${ar(ses.right)} صحيحة | ❌ ${ar(ses.wrong)} خطأ`;
+  setTimeout(()=>{if(!ses)return;if(ses.right+ses.wrong>=ses.max)finish();else if(ses.left>0||ses.untimed)next()},300)}
+ else{ses.wrong++;r.w++;save();ses.paused=true;i.disabled=true;
+  fb.className='fb no';fb.textContent='❌ الإجابة تحتاج إلى مراجعة';
+  document.getElementById('sc').textContent=`✅ ${ar(ses.right)} صحيحة | ❌ ${ar(ses.wrong)} خطأ`;
+  const [a,b]=c.x;let h='';
+  if(ses.k=='mul'&&(a==0||b==0))h=`أي عدد × ٠ = ٠<br>${ar(a)} × ${ar(b)} = ٠`;
+  else if(ses.k=='mul')h=`<b>${ar(a)} × ${ar(b)}</b> تعني ${ar(b)} مجموعات من ${ar(a)}:<br>${Array(b).fill(ar(a)).join(' + ')} = ${ar(c.a)}`;
+  if(ses.k=='add')h=`ابدئي من <b>${ar(a)}</b> وعدّي ${ar(b)} خطوات للأمام:<br>${ar(a)} + ${ar(b)} = ${ar(c.a)}`;
+  if(ses.k=='sub')h=`ابدئي من <b>${ar(a)}</b> وعدّي ${ar(b)} خطوات للخلف:<br>${ar(a)} − ${ar(b)} = ${ar(c.a)}`;
+  if(ses.k=='div')h=`فكري: ${ar(b)} × ؟ = ${ar(a)}<br>${ar(b)} × ${ar(c.a)} = ${ar(a)} ← إذن ${ar(a)} ÷ ${ar(b)} = ${ar(c.a)}`;
+  document.getElementById('act').innerHTML=`<div class="corr">${h}<br>✅ <b>${c.q} = ${ar(c.a)}</b></div><button class="big" onclick="afterWrong()">➡️ فهمتُ، انتقلي للسؤال التالي</button>`}}
+function afterWrong(){if(ses.right+ses.wrong>=ses.max)finish();else if(ses.untimed||ses.left>0)next();else finish()}
+
+function finish(){if(!ses)return;clearInterval(tm);const S=ses;ses=null;
+ const n=S.right+S.wrong,acc=n?Math.round(S.right/n*100):0,avg=avgT(S.times),s=sk(S.k);
+ const lv=n>=5?lvlOf(acc,avg,S.k):0;
+ if(n>=5){s.sess.push({d:Date.now(),acc,avg,n,right:S.right,wrong:S.wrong,dur:S.untimed?0:S.dur});
+  if(lv>s.lvl)s.lvl=lv;if(acc>s.bestAcc)s.bestAcc=acc;if(avg!=null&&acc>=db.set.t[0]&&(s.bestTime==null||avg<s.bestTime))s.bestTime=avg;save();syncUp()}
+ const t=db.set.t,tg=db.set.tg[S.k],m=db.set.m;const pk=x=>x[Math.floor(Math.random()*x.length)];let msg;
+ const low=['💪 البداية دائمًا تكون صعبة، وكل محاولة تجعلكِ أقوى. راجعي الحقائق التي أخطأتِ فيها ببطء ثم حاولي من جديد.','🌱 لا بأس، أنتِ تتعلمين. تدربي على القليل كل يوم، وسترين مستواكِ يرتفع بسرعة!','🎯 ركزي على حقيقة واحدة في كل مرة وكرريها حتى تحفظيها، وستصبحين أفضل بإذن الله.','🚀 مستواكِ سيرتفع إذا واصلتِ التدريب. ابدئي بمراجعة حقائقك التي تحتاج إلى تدريب.'];
+ const mid=['📚 أنتِ على الطريق الصحيح! احفظي الحقائق التي أخطأتِ فيها، وسترتفع دقتك وسرعتك.','⚡ قريبة جدًا من الإتقان! كرري الحقائق الصعبة عدة مرات لتتذكريها بسرعة ودون تردد.','🎯 الحفظ هو السر. راجعي حقائقك وحاولي أن تجيبي بسرعة أكبر في التدريب القادم.','🔄 تحسنك واضح، لكن تحتاجين إلى مزيد من التكرار والحفظ لتزيدي سرعتك.'];
+ if(acc<60)msg=pk(low);
+ else if(acc<80)msg=pk(mid);
+ else if(acc>=t[2]&&avg!=null&&avg<=tg)msg='🏆 رائع! دقة عالية مع سرعة عالية: وصلتِ إلى مستوى الطلاقة الحسابية.';
+ else if(avg!=null&&avg>tg*m[0])msg='⚡ إجاباتك صحيحة لكنها بطيئة. الإتقان دقة وسرعة معًا، فكرري الحقائق حتى تجيبي دون تردد.';
+ else msg='👍 نتيجة جيدة! اقتربتِ، ارفعي سرعتك أو دقتك قليلًا لتصلي إلى المستوى التالي.';
+ const cmp=S.mode=='daily'&&S.prev!=null?`<div class="card" style="text-align:center">${acc>=S.prev?`نتيجتك اليوم أفضل من آخر تدريب بنسبة ${ar(acc-S.prev)}٪ 🎉`:`نتيجتك أقل من آخر تدريب بـ ${ar(S.prev-acc)}٪، غدًا أفضل بإذن الله 💪`}</div>`:'';
+ app.innerHTML=`<h1>🎉 انتهى التحدي!</h1><div class="card">
+ <div class="stat"><span>اسم الطالبة</span><b>${esc(db.cur)}</b></div>
+ <div class="stat"><span>المهارة</span><b>${SK[S.k].n}</b></div>
+ <div class="stat"><span>⏱️ الزمن</span><b>${S.untimed?'بلا مؤقت':ar(S.dur)+' ثانية'}</b></div>
+ <div class="stat"><span>📝 عدد الأسئلة</span><b>${ar(n)}</b></div>
+ <div class="stat"><span>✅ صحيحة</span><b>${ar(S.right)}</b></div>
+ <div class="stat"><span>❌ خاطئة</span><b>${ar(S.wrong)}</b></div>
+ <div class="stat"><span>🎯 الدقة</span><b>${ar(acc)}٪</b></div>
+ <div class="stat"><span>⚡ متوسط زمن الإجابة الصحيحة</span><b>${avg==null?'—':ar(avg.toFixed(1))+' ثانية'}</b></div>
+ <div class="stat"><span>🏆 مستوى الأداء</span><b>${n>=5?LV[lv]:'تدربي على ٥ أسئلة على الأقل'}</b></div></div>
+ <div class="card" style="text-align:center;font-weight:700">${msg}</div>${cmp}<div class="card" style="text-align:center">${goalHtml(S.k)}<br><span class="mu">هذا التدريب: دقة ${ar(acc)}٪${avg==null?'':'، متوسط زمن '+ar(avg.toFixed(1))+' ث'}</span></div><div class="card"><b>⏱️ زمن الحل لكل مستوى</b>${lvTable(sk(S.k),S.k)}</div>
+ <div style="text-align:center"><button class="big" onclick="skill('${S.k}')">🔁 تدريب جديد</button></div><div id="codeBox" style="text-align:center"><button class="sec" onclick="showCode('${S.k}')">📋 انسخي رمز نتيجتي للمعلمة</button></div>${nav()}`;showCode(S.k)}
+
+function weakPage(k){const f=sk(k).facts,w=weak(k);
+ app.innerHTML=`<h1>📚 ${SK[k].i} حقائق ${SK[k].n} التي تحتاج إلى تدريب</h1><div class="card wrap">${w.length?`<table><tr><th>الحقيقة</th><th>الأخطاء</th><th>النجاحات</th><th>متوسط الزمن</th></tr>${w.map(x=>{const r=f[x.key];return `<tr><td><b>${x.q} = ${ar(x.a)}</b></td><td class="bad">${ar(r.w)}</td><td>${ar(r.r)}</td><td>${r.n?ar((r.tt/r.n).toFixed(1))+' ث':'—'}</td></tr>`}).join('')}</table>`:'<p style="text-align:center">لا توجد حقائق تحتاج إلى تدريب الآن 🌟</p>'}</div>
+ <div style="text-align:center">${w.length?`<button class="big" onclick="start('${k}',60,'weak',weak('${k}'))">🔄 تدربي على هذه الحقائق</button>`:''}<button class="sec" onclick="skill('${k}')">رجوع</button></div>${nav()}`}
+
+function progress(){clearInterval(tm);
+ app.innerHTML=`<h1>📈 تقدمي</h1>${Object.keys(SK).map(k=>{const s=sk(k);return `<div class="card"><h2>${SK[k].i} ${SK[k].n}</h2>
+ <div class="stat"><span>أفضل دقة</span><b>${ar(s.bestAcc)}٪</b></div>
+ <div class="stat"><span>أفضل زمن</span><b>${s.bestTime==null?'—':ar(s.bestTime.toFixed(1))+' ثانية'}</b></div>
+ <div class="stat"><span>عدد التدريبات</span><b>${ar(s.sess.length)}</b></div>
+ <div class="stat"><span>المستوى</span><b>${LV[s.lvl]}</b></div>
+ ${lvTable(s,k)}<div class="bar"><i style="width:${s.lvl*25}%"></i></div></div>`}).join('')}<div id="codeBox" style="text-align:center"><button class="sec" onclick="showAll()">📋 انسخي رمز نتيجتي للمعلمة</button></div>${nav()}`}
+
+function avgSess(s){const l=s.sess.slice(-3);return l.length?{acc:Math.round(avgT(l.map(x=>x.acc))),avg:avgT(l.filter(x=>x.avg!=null).map(x=>x.avg))}:null}
+const gs=(st,k)=>(st&&st[k])||{sess:[],lvl:0};
+function allStu(){const m={};Object.keys(db.students).forEach(n=>m[n]=db.students[n]);Object.keys(db.imported||{}).forEach(n=>m[n]=db.imported[n]);Object.values(remote).forEach(x=>{m[x.name]=x.data||{}});return m}
+function tblHtml(){return tblMain()+tblLv()}
+function tblMain(){const k=teacherSkill,t=db.set.t,m=allStu();
+ const rows=Object.keys(m).map(n=>{const s=gs(m[n],k),a=avgSess(s);return `<tr><td>${esc(n)}</td><td>${SN[k]}</td><td class="${a&&a.acc<t[0]?'bad':''}">${a?ar(a.acc)+'٪':'—'}</td><td>${a&&a.avg!=null?ar(a.avg.toFixed(1))+' ث':'—'}</td><td>${ar(s.sess.length)}</td><td>${LV[s.lvl]}${a&&a.acc<t[0]?' ⚠️ تحتاج دعمًا':''}${a&&a.acc>=t[0]&&a.avg!=null&&a.avg>db.set.tg[k]*db.set.m[0]?' 🐢 تحتاج إلى سرعة':''}</td></tr>`}).join('');
+ return rows?`<table><tr><th>الطالبة</th><th>المهارة</th><th>الدقة</th><th>متوسط الزمن</th><th>التدريبات</th><th>المستوى</th></tr>${rows}</table>`:'<p>لا توجد طالبات بعد.</p>'}
+function teacher(){clearInterval(tm);sub();const k=teacherSkill,t=db.set.t;
+ const st=CANR?'🟢 متصلة بقاعدة البيانات المشتركة: تظهر نتائج الطالبات من جميع الأجهزة.':'⚪ تعرض هذه اللوحة طالبات هذا الجهاز فقط. لعرض طالبات الأجهزة الأخرى يجب فتح الصفحة بحساب المعلمة (المالكة).';
+ app.innerHTML=`<h1>👩‍🏫 لوحة المعلمة</h1><p class="mu" style="text-align:center">${st}</p><div class="nav">${Object.keys(SK).map(x=>`<button class="${x==k?'':'sec'}" onclick="teacherSkill='${x}';teacher()">${SK[x].i} ${SN[x]}</button>`).join('')}</div>
+ <div class="card wrap" id="tbl">${tblHtml()}</div>
+ <p class="mu" style="text-align:center">الدقة ومتوسط الزمن لآخر ٣ تدريبات.</p><div style="text-align:center"><button onclick="exportCsv()">📥 تنزيل النتائج لفتحها في الشيت (CSV)</button></div>
+ <div class="card"><h2>📋 استيراد نتيجة طالبة</h2><p class="mu" style="margin:0">اكتبي اسم الطالبة والرمز الذي أرسلته (٤ خانات، مثل K7M2)</p><input id="inm" placeholder="اسم الطالبة" style="width:100%;margin:6px 0;padding:8px;font-size:1rem"><textarea id="imp" rows="1" placeholder="الرمز" style="width:100%;direction:ltr;margin:4px 0 8px"></textarea><button onclick="importCode()">➕ إضافة إلى الجدول</button> <span id="ist" class="mu"></span></div>
+ <div class="card"><h2>⚙️ الإعدادات</h2>
+ <label>حد المستوى الأول (دقة ٪) <input type="number" id="t0" value="${t[0]}" style="width:80px"></label>
+ <label>حد المستوى الثاني <input type="number" id="t1" value="${t[1]}" style="width:80px"></label>
+ <label>حد المستوى الثالث والطلاقة <input type="number" id="t2" value="${t[2]}" style="width:80px"></label>
+ ${Object.keys(SK).map(x=>`<label>زمن الطلاقة المستهدف: ${SN[x]} (ثانية) <input type="number" step="0.1" id="g${x}" value="${db.set.tg[x]}" style="width:80px"></label>`).join('')}
+ <label>مضاعف الزمن لمستوى ⭐ (× الزمن المستهدف) <input type="number" step="0.1" id="m0" value="${db.set.m[0]}" style="width:80px"></label>
+ <label>مضاعف الزمن لمستوى ⭐⭐ <input type="number" step="0.1" id="m1" value="${db.set.m[1]}" style="width:80px"></label>
+ <label>مضاعف الزمن لمستوى ⭐⭐⭐ <input type="number" step="0.1" id="m2" value="${db.set.m[2]}" style="width:80px"></label>
+ <button onclick="saveSet()">حفظ الإعدادات</button> <button class="sec" onclick="if(confirm('حذف بيانات هذا الجهاز؟')){db.students={};db.imported={};db.cur='';save();home()}">🗑️ مسح بيانات الجهاز</button></div>${nav()}`}
+async function exportCsv(){const m=allStu(),R=[['الطالبة','المهارة','الدقة %','متوسط الزمن (ث)','عدد التدريبات','المستوى','زمن البداية','زمن في طريق الإتقان','زمن متقنة','زمن متقنة جدًا','زمن الطلاقة']];
+ Object.keys(m).forEach(n=>Object.keys(SK).forEach(k=>{const s=gs(m[n],k),a=avgSess(s);R.push([n,SK[k].n,a?a.acc:'',a&&a.avg!=null?a.avg.toFixed(1):'',s.sess.length,LV[s.lvl],...lvTimes(s,k).map(x=>x.avg==null?'':x.avg.toFixed(1))])}));
+ const csv='\uFEFF'+R.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+ try{const d=await claude.use('downloads');if(!d)throw 0;await d.save({filename:'نتائج-الطالبات.csv',data:new Blob([csv],{type:'text/csv;charset=utf-8'})});return}catch(e){}
+ let b=document.getElementById('csvBox');if(!b){b=document.createElement('div');b.id='csvBox';document.getElementById('tbl').after(b)}
+ b.innerHTML='<div class="card"><b>انسخي النص التالي والصقيه في الشيت (Google Sheets أو Excel)</b><textarea readonly rows="6" style="width:100%;direction:ltr;margin-top:8px" onclick="this.select()">'+esc(R.map(r=>r.join('\t')).join('\n'))+'</textarea></div>'}
+const AL='23456789ABCDEFGHJKLMNPQRSTUVWXYZ',KS=['add','sub','mul','div'];
+function codeFor(k){const s=sk(k),l=s.sess[s.sess.length-1];if(!l)return null;
+ const t=l.avg==null?255:Math.min(254,Math.round(l.avg*10));let v=(KS.indexOf(k)<<18)|(Math.min(100,l.acc)<<11)|(t<<3)|Math.min(4,s.lvl),c='';
+ for(let i=0;i<4;i++){c=AL[v&31]+c;v>>=5}return c}
+function decCode(c){c=c.trim().toUpperCase();if(c.length!==4)return null;let v=0;for(const ch of c){const i=AL.indexOf(ch);if(i<0)return null;v=v*32+i}
+ const o={k:KS[(v>>18)&3],acc:(v>>11)&127,t:(v>>3)&255,lvl:v&7};return o.acc>100||o.lvl>4?null:o}
+function showCode(k){const box=document.getElementById('codeBox'),c=codeFor(k);
+ if(!c){box.innerHTML='<p class="mu">أنهي تدريبًا فيه ٥ أسئلة على الأقل ليظهر رمز نتيجتك</p>';return}
+ box.innerHTML=`<p><b>📋 رمز نتيجتك في ${SN[k]}: أرسليه للمعلمة مع اسمك</b></p><div id="cd" style="font-size:2.8rem;letter-spacing:.3em;font-weight:800;direction:ltr;color:var(--pr);user-select:all">${c}</div><button onclick="copyCode()">نسخ الرمز</button> <span id="cst" class="mu"></span>`}
+function showAll(){const box=document.getElementById('codeBox'),L=KS.filter(k=>codeFor(k));
+ box.innerHTML=L.length?`<p><b>📋 رموز نتائجك: أرسليها للمعلمة مع اسمك</b></p>`+L.map(k=>`<div class="stat"><span>${SK[k].i} ${SN[k]}</span><b style="font-size:1.6rem;letter-spacing:.2em;direction:ltr">${codeFor(k)}</b></div>`).join(''):'<p class="mu">لا توجد تدريبات بعد</p>'}
+function copyCode(){const t=document.getElementById('cd').textContent;try{navigator.clipboard.writeText(t)}catch(e){}
+ try{const x=document.createElement('textarea');x.value=t;document.body.appendChild(x);x.select();document.execCommand('copy');x.remove()}catch(e){}
+ document.getElementById('cst').textContent='✅ تم النسخ'}
+function importCode(){const st=document.getElementById('ist'),v=document.getElementById('imp').value.trim(),nm=document.getElementById('inm').value.trim().slice(0,40);
+ try{
+ if(v.startsWith('MFC1:')){const o=JSON.parse(decodeURIComponent(escape(atob(v.slice(5)))));if(!o||typeof o.name!=='string'||!o.name.trim()||typeof o.data!=='object')throw 0;
+ const N=x=>{x=Number(x);return isFinite(x)?x:0},c={};
+ Object.keys(SK).forEach(k=>{const r=o.data[k];if(!r||!Array.isArray(r.sess))return;const f={};Object.keys(r.facts||{}).slice(0,200).forEach(q=>{const y=r.facts[q];f[String(q).slice(0,12)]={r:N(y.r),w:N(y.w),tt:N(y.tt),n:N(y.n)}});
+  c[k]={lvl:Math.min(4,Math.max(0,N(r.lvl))),bestAcc:N(r.bestAcc),bestTime:r.bestTime==null?null:N(r.bestTime),facts:f,sess:r.sess.slice(-200).map(z=>({d:N(z.d),acc:N(z.acc),avg:z.avg==null?null:N(z.avg),n:N(z.n),right:N(z.right),wrong:N(z.wrong),dur:N(z.dur)}))}});
+ (db.imported=db.imported||{})[o.name.trim().slice(0,40)]=c;st.textContent='✅ تمت إضافة الطالبة: '+o.name.trim()}
+ else{const o=decCode(v);if(!o||!nm)throw 0;const I=db.imported=db.imported||{},S=I[nm]=I[nm]||{},r=S[o.k]=S[o.k]||{lvl:0,bestAcc:0,bestTime:null,facts:{},sess:[]},av=o.t==255?null:o.t/10;
+  r.sess.push({d:Date.now(),acc:o.acc,avg:av,n:0,right:0,wrong:0,dur:0});r.lvl=Math.max(r.lvl,o.lvl);r.bestAcc=Math.max(r.bestAcc,o.acc);if(av!=null&&o.acc>=db.set.t[0]&&(r.bestTime==null||av<r.bestTime))r.bestTime=av;
+  st.textContent='✅ تمت إضافة نتيجة '+nm+' في '+SN[o.k]}
+ save();document.getElementById('imp').value='';document.getElementById('tbl').innerHTML=tblHtml()}
+ catch(e){st.textContent='❌ تأكدي من كتابة اسم الطالبة ومن الرمز (٤ خانات)'}}
+function lvTimes(s,k){const o=[0,1,2,3,4].map(()=>({n:0,t:[]}));(s.sess||[]).forEach(z=>{if(z.avg==null)return;const l=lvlOf(z.acc,z.avg,k);o[l].n++;o[l].t.push(z.avg)});return o.map(x=>({n:x.n,avg:avgT(x.t),best:x.t.length?Math.min(...x.t):null}))}
+function lvTable(s,k){const o=lvTimes(s,k),rows=o.map((x,i)=>x.n?`<tr><td>${LV[i]}</td><td>${ar(x.n)}</td><td>${ar(x.avg.toFixed(1))} ث</td><td>${ar(x.best.toFixed(1))} ث</td></tr>`:'').join('');
+ return rows?`<div class="wrap"><table><tr><th>المستوى</th><th>التدريبات</th><th>متوسط زمن الحل</th><th>أفضل زمن</th></tr>${rows}</table></div>`:'<p class="mu">لا توجد بيانات زمن بعد</p>'}
+function tblLv(){const k=teacherSkill,m=allStu(),N=Object.keys(m);if(!N.length)return '';
+ return `<h2>⏱️ متوسط زمن الحل لكل مستوى</h2><table><tr><th>الطالبة</th><th>🌱</th><th>⭐</th><th>⭐⭐</th><th>⭐⭐⭐</th><th>🏆</th></tr>${N.map(n=>`<tr><td>${esc(n)}</td>${lvTimes(gs(m[n],k),k).map(x=>`<td>${x.avg==null?'—':ar(x.avg.toFixed(1))+' ث'}</td>`).join('')}</tr>`).join('')}</table>`}
+function saveSet(){db.set.t=[0,1,2].map(i=>+document.getElementById('t'+i).value||db.set.t[i]);
+ Object.keys(SK).forEach(x=>db.set.tg[x]=+document.getElementById('g'+x).value||db.set.tg[x]);db.set.m=[0,1,2].map(i=>+document.getElementById('m'+i).value||db.set.m[i]);save();if(DB&&CANR)DB.doc('settings/config').set(Object.assign({t0:Date.now()},db.set,{t:db.set.t})).catch(()=>{});alert('تم الحفظ ✅')}
+home();
+</script>
+</body>
+</html>
